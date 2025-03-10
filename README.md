@@ -1,24 +1,24 @@
 # Archlord (2006) – Rebuild with Unreal Engine 5
 
-## Project Description
+## 🎮 Project Description
 
 This repository is used to structure and organize all necessary source data for the recreation of the MMORPG **Archlord (2006)** with **Unreal Engine 5**. The goal is to preserve the original gaming experience while utilizing modern technologies for improved performance and visual quality.
 
 ---
 
-## Project Goals
+## 📌 Project Goals
 
-✅ **Faithful Reconstruction** – Based on the original game data and mechanics\  
-✅ **Optimized Performance** – Using modern rendering technologies of UE5\  
-✅ **Extensibility** – Ability for future modifications or expansions\  
-✅ **Multiplayer Functionality** – Integration of a dedicated server system
+🔥 **Faithful Reconstruction** – Based on the original game data and mechanics\  
+🔥 **Optimized Performance** – Using modern rendering technologies of UE5\  
+🔥 **Extensibility** – Ability for future modifications or expansions\  
+🔥 **Multiplayer Functionality** – Integration of a dedicated server system
 
 ---
 
-## Repository Structure
+## 📂 Repository Structure
 
 ```
-💾 ArchlordRemake
+💾 Archlord-Rebuild
  ├── 📄 README.md                  # This file
  ├── 📂 Assets                     # Graphics, textures, models
  │   ├── 📂 Characters             # Character models & animations
@@ -34,16 +34,16 @@ This repository is used to structure and organize all necessary source data for 
 
 ---
 
-## Progress
+## 🔄 Progress
 
-- [x]  Initial asset analysis & import into UE5
-- [ ]  Basic movement & controls
-- [ ]  Implement combat system
-- [ ]  Develop NPC & quest system
-- [ ]  Set up multiplayer server
+✅  Initial asset analysis & import into UE5\
+🔳  Basic movement & controls\
+🔳  Implement combat system\
+🔳  Develop NPC & quest system\
+🔳  Set up multiplayer server
 
 ---
-## License
+## 🐟 License
 
 🔒 This project is currently **private** and is intended for research & learning purposes only.\  
 The original game _Archlord (2006)_ is the property of Webzen.
