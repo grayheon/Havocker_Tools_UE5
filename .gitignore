@@ -82,3 +82,4 @@ fabric.properties
 Map/dest/**/*
 !Map/dest/world_mini_map.png
 Json
+QuickCommit+Push.cmd
