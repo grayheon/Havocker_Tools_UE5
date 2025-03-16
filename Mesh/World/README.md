@@ -3,6 +3,13 @@
 ## 📜 Beschreibung  
 Diese Datei enthält eine Liste aller verwendeten PNG-Texturen für das Terrain-Mesh-Projekt. Jede Datei ist einzigartig und alphabetisch sortiert.  
 
+## 📊 Statistik  
+- **Gesamtanzahl der Texturen im Projekt:** 777  
+- **Anzahl der tatsächlich verwendeten Texturen:** 655  
+- **Prozentuale Nutzung:** 84.30%  
+
+Diese Statistik zeigt, wie viele der vorhandenen Texturen tatsächlich genutzt werden.  
+
 ## 📂 Dateistruktur  
 Die Texturdateien sind in einer separaten Liste gespeichert und können für verschiedene Zwecke wie Rendering, Level-Design oder Asset-Optimierung genutzt werden.  
 
