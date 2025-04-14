@@ -22,7 +22,7 @@ jobs:
           override: true
 
       - name: Build workspace
-        run: cargo build --workspace
+        run: cargo build --manifest-path Archlord-AIO/Cargo.toml --workspace
 
       - name: Run tests
-        run: cargo test --workspace
+        run: cargo test --manifest-path Archlord-AIO/Cargo.toml --workspace

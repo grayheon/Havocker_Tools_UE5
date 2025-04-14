@@ -28,7 +28,7 @@ jobs:
           mkdir -p release_out
           > apps_to_release.txt
 
-          for dir in apps/*; do
+          for dir in Archlord-AIO/apps/*; do
             if [ -f "$dir/Cargo.toml" ]; then
               name=$(basename "$dir")
               version=$(grep '^version' "$dir/Cargo.toml" | head -n1 | cut -d '"' -f2)
@@ -50,16 +50,16 @@ jobs:
             git push origin "$tag"
 
             echo "Building $name..."
-            cargo build -p "$name" --release
+            cargo build -p "$name" --manifest-path Archlord-AIO/Cargo.toml --release
 
             mkdir -p release_out/$name
-            cp target/release/$name release_out/$name/
+            cp Archlord-AIO/target/release/$name release_out/$name/
           done < apps_to_release.txt || true
 
       - name: Upload GitHub releases
         if: success()
         uses: softprops/action-gh-release@v1
         with:
-          files: release_out/**/*  # alle App-Binaries
+          files: release_out/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
