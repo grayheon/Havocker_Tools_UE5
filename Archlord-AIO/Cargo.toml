@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "apps/core_main",
+    "apps/dff_scanner",
+    "apps/extractor",
+    "apps/minimap",
+    "apps/obj_checker",
+    "apps/txd_converter",
+    "apps/txd_viewer",
+    "libs/shared_utils",
+]
+
+resolver = "3"

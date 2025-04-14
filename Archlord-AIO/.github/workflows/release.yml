@@ -1,0 +1,65 @@
+name: Auto Release All Apps
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Find apps with new versions
+        id: prepare
+        run: |
+          mkdir -p release_out
+          > apps_to_release.txt
+
+          for dir in apps/*; do
+            if [ -f "$dir/Cargo.toml" ]; then
+              name=$(basename "$dir")
+              version=$(grep '^version' "$dir/Cargo.toml" | head -n1 | cut -d '"' -f2)
+              tag="${name}-v${version}"
+
+              if ! git tag | grep -q "^$tag$"; then
+                echo "$name $version" >> apps_to_release.txt
+              fi
+            fi
+          done
+
+      - name: Create tags and build binaries
+        if: success()
+        run: |
+          while read name version; do
+            tag="${name}-v${version}"
+            echo "Tagging $tag..."
+            git tag "$tag"
+            git push origin "$tag"
+
+            echo "Building $name..."
+            cargo build -p "$name" --release
+
+            mkdir -p release_out/$name
+            cp target/release/$name release_out/$name/
+          done < apps_to_release.txt || true
+
+      - name: Upload GitHub releases
+        if: success()
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release_out/**/*  # alle App-Binaries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

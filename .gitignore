@@ -79,9 +79,7 @@ fabric.properties
 
 .idea/*
 .venv/*
-Map/dest/**/*
-!Map/dest/world_mini_map.png
-Json
-QuickCommit+Push.cmd
 *.blend
 *.cmd
+/Archlord-AIO/.idea
+/Archlord-AIO/target
