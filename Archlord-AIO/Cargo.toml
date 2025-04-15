@@ -8,7 +8,8 @@ members = [
     "apps/txd_converter",
     "apps/txd_viewer",
     "libs/shared_utils",
-    "apps/meta"
+    "apps/meta",
+    "xtask"
 ]
 
 resolver = "3"
