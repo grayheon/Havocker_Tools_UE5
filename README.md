@@ -49,3 +49,6 @@ This repository is used to structure and organize all necessary source data for 
 The original game _Archlord (2006)_ is the property of Webzen.
 
 ---
+
+Important Notice: The use of these tools and scripts is at your own risk. I take no responsibility for any damages of any kind that may result from their use.
+
