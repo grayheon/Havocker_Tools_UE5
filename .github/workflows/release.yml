@@ -1,4 +1,4 @@
-name: Auto Release All Apps
+name: Unified Workspace Release
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  release:
+  unified-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,44 +22,45 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Find apps with new versions
-        id: prepare
+      - name: Extract version and tag
+        id: version
         run: |
+          version=$(grep '^version' Archlord-AIO/apps/meta/Cargo.toml | head -n1 | cut -d '"' -f2)
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "tag=Archlord-AIO-v$version" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git tag | grep -q "^${{ steps.version.outputs.tag }}$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build all apps
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          cargo build --manifest-path Archlord-AIO/Cargo.toml --release
           mkdir -p release_out
-          > apps_to_release.txt
-
-          for dir in Archlord-AIO/apps/*; do
-            if [ -f "$dir/Cargo.toml" ]; then
-              name=$(basename "$dir")
-              version=$(grep '^version' "$dir/Cargo.toml" | head -n1 | cut -d '"' -f2)
-              tag="${name}-v${version}"
-
-              if ! git tag | grep -q "^$tag$"; then
-                echo "$name $version" >> apps_to_release.txt
-              fi
-            fi
+          for path in Archlord-AIO/target/release/*; do
+            [ -f "$path" ] && cp "$path" release_out/
           done
 
-      - name: Create tags and build binaries
-        if: success()
+      - name: Create Git Tag
+        if: steps.check_tag.outputs.exists == 'false'
         run: |
-          while read name version; do
-            tag="${name}-v${version}"
-            echo "Tagging $tag..."
-            git tag "$tag"
-            git push origin "$tag"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
 
-            echo "Building $name..."
-            cargo build -p "$name" --manifest-path Archlord-AIO/Cargo.toml --release
-
-            mkdir -p release_out/$name
-            cp Archlord-AIO/target/release/$name release_out/$name/
-          done < apps_to_release.txt || true
-
-      - name: Upload GitHub releases
-        if: success()
+      - name: Upload GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
         with:
-          files: release_out/**/*
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Archlord-AIO ${{ steps.version.outputs.version }}
+          files: release_out/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
