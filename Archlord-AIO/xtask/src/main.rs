@@ -9,7 +9,7 @@ fn main() {
     println!("🔨 Building release...");
     run("cargo", &["build", "--manifest-path", "Cargo.toml", "--workspace", "--release"]);
 
-    let release_dir = format!("release_out_{}", version);
+    let release_dir = format!("Archlord-AIO-v{}", version);
     fs::create_dir_all(&release_dir).unwrap();
 
     println!("📁 Collecting binaries...");
@@ -17,22 +17,57 @@ fn main() {
     for entry in fs::read_dir(bin_path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |e| e == "exe") {
+        let file_name = path.file_name().unwrap().to_string_lossy().to_lowercase();
+
+        if path.is_file()
+            && path.extension().map_or(false, |e| e == "exe")
+            && file_name != "xtask.exe"
+        {
             fs::copy(&path, Path::new(&release_dir).join(path.file_name().unwrap())).unwrap();
         }
     }
 
-    println!("🏷️ Creating tag: {}", tag);
-    run("git", &["tag", &tag]);
-    run("git", &["push", "origin", &tag]);
+
+    println!("🏷️ Checking if tag already exists...");
+    let tag_check = Command::new("git")
+        .args(["tag", "-l", &tag])
+        .output()
+        .expect("Failed to check tag");
+
+    let tag_exists = String::from_utf8_lossy(&tag_check.stdout).trim() == tag;
+
+    if tag_exists {
+        println!("ℹ️ Tag '{}' already exists. Skipping tag creation.", tag);
+    } else {
+        println!("🏷️ Creating tag: {}", tag);
+        run("git", &["tag", &tag]);
+        run("git", &["push", "origin", &tag]);
+    }
+
 
     println!("⬆️ Uploading GitHub release...");
-    run("gh", &[
+    let paths: Vec<_> = fs::read_dir(&release_dir)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+
+    let title = format!("Archlord-AIO {}", version);
+    let notes = format!("Automated Windows release for version {}", version);
+
+    let mut args = vec![
         "release", "create", &tag,
-        "--title", &format!("Archlord-AIO {}", version),
-        "--notes", &format!("Automated Windows release for version {}", version),
-        &format!("{}/{}", release_dir, "*")
-    ]);
+        "--title", &title,
+        "--notes", &notes,
+    ];
+
+    for path in &paths {
+        args.push(path.to_str().unwrap());
+    }
+
+    run("gh", &args);
+
 }
 
 fn read_version(toml_path: &str) -> String {
