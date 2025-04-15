@@ -8,6 +8,7 @@ members = [
     "apps/txd_converter",
     "apps/txd_viewer",
     "libs/shared_utils",
+    "apps/meta"
 ]
 
 resolver = "3"
