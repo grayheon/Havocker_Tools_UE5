@@ -10,4 +10,5 @@ image = { version = "0.25.6", features = ["png", "jpeg", "tga", "bmp"] }
 configparser = "3.0.2"
 encoding_rs = "0.8.35"
 encoding_rs_io = "0.1"
-winapi = { version = "0.3", features = ["wincrypt", "minwindef", "ntdef"] }
+md-5 = "0.10"
+rc4 = "0.1"

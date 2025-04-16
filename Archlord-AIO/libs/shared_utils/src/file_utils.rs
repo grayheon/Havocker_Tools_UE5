@@ -1,7 +1,9 @@
-use crate::extension::SkipMode;
+use crate::{DecryptKey, FileExtension, SkipMode, decrypt_data_pure};
 use regex::Regex;
-use std::{fs, path::{Path, PathBuf}};
-use crate::{decrypt_data, FileExtension};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub fn find_files(source_path: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
@@ -17,7 +19,10 @@ pub fn find_files(source_path: &Path) -> Vec<PathBuf> {
                     .unwrap_or("")
                     .to_lowercase();
 
-                if ignored_folders.iter().any(|name| name.eq_ignore_ascii_case(&folder_name)) {
+                if ignored_folders
+                    .iter()
+                    .any(|name| name.eq_ignore_ascii_case(&folder_name))
+                {
                     continue;
                 }
 
@@ -25,8 +30,23 @@ pub fn find_files(source_path: &Path) -> Vec<PathBuf> {
             } else if let Some(ext_str) = path.extension().and_then(|e| e.to_str()) {
                 let ext = FileExtension::from_str(ext_str);
                 if ext.is_relevant() {
-                    let file_name = path.file_name().and_then(|f| f.to_str()).unwrap_or("").to_lowercase();
-                    if ext != FileExtension::Dat || file_name == "data.dat" || file_name == "reference.dat" {
+                    let file_name = path
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    if matches!(
+                        ext,
+                        FileExtension::Dat | FileExtension::Ma1 | FileExtension::Ma2
+                    ) {
+                        if file_name == "data.dat"
+                            || file_name == "reference.dat"
+                            || file_name.ends_with(".ma1")
+                            || file_name.ends_with(".ma2")
+                        {
+                            files.push(path);
+                        }
+                    } else {
                         files.push(path);
                     }
                 }
@@ -61,14 +81,25 @@ pub fn should_skip_decryption(file_name: &str) -> SkipMode {
 pub fn process_regular_files(files: &[PathBuf], source_path: &str, destination_path: &str) {
     let non_dat_files: Vec<PathBuf> = files
         .iter()
-        .filter(|f| !f.extension().map_or(false, |ext| ext.eq_ignore_ascii_case("dat")))
+        .filter(|f| {
+            let ext = f.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            !matches!(ext.as_str(), "dat" | "ma1" | "ma2")
+        })
         .cloned()
         .collect();
 
     for file in &non_dat_files {
         let relative_path = file.strip_prefix(source_path).unwrap_or(file);
-        let file_name = file.file_name().and_then(|f| f.to_str()).unwrap_or("").to_lowercase();
-        let extension = file.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+        let file_name = file
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let extension = file
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
         let ext_enum = FileExtension::from_str(&extension);
         let new_ext = ext_enum.mapped();
 
@@ -104,7 +135,7 @@ fn copy_file(src: &Path, dest: &Path) {
 
 fn decrypt_and_write(src: &Path, dest: &Path) {
     if let Ok(mut data) = fs::read(src) {
-        let _ = decrypt_data(&mut data, false);
+        let _ = decrypt_data_pure(&mut data, DecryptKey::Default);
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent).ok();
         }

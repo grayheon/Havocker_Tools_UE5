@@ -1,4 +1,4 @@
-use shared_utils::{ensure_config_file, load_paths_from_config, prepare_destination, find_files, process_regular_files, process_dat_files};
+use shared_utils::{ensure_config_file, load_paths_from_config, prepare_destination, find_files, process_regular_files, process_dat_files, process_ma_files};
 use std::path::Path;
 use std::process::Command;
 use std::thread;
@@ -21,6 +21,7 @@ fn run() -> std::io::Result<()> {
     let files = find_files(Path::new(&source_path));
     process_regular_files(&files, &source_path, &destination_path);
     process_dat_files(&files, &destination_path);
+    process_ma_files(&files, &destination_path);
 
     // 3. Starte parallele Tasks
     let t_minimap = thread::spawn(|| run_subtool("minimap"));

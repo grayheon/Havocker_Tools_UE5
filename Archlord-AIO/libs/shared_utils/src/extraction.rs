@@ -1,5 +1,4 @@
-use crate::decryption::decrypt_data;
-use crate::extension::FileExtension;
+use crate::{decrypt_data_pure, DecryptKey, FileExtension};
 use std::{
     ffi::OsStr,
     fs::{self, File},
@@ -13,7 +12,7 @@ pub fn extract_files(data_path: &Path, ref_path: &Path, destination_path: &Path)
     let mut data_file = io::Cursor::new(&data_encrypted);
 
     let mut ref_encrypted = fs::read(ref_path)?;
-    let decrypted_ref_len = decrypt_data(&mut ref_encrypted, false)?;
+    let decrypted_ref_len = decrypt_data_pure(&mut ref_encrypted, DecryptKey::Default);
     let mut ref_file = io::Cursor::new(&ref_encrypted[..decrypted_ref_len]);
 
 
@@ -25,8 +24,15 @@ pub fn extract_files(data_path: &Path, ref_path: &Path, destination_path: &Path)
     let output_base = destination_path.join(folder_name);
     fs::create_dir_all(&output_base)?;
 
-    print!("\r📂 Extrahiere {} → Ziel: {}", data_path.display(), output_base.display());
-    println!("Entschlüsselte reference.dat Größe: {}", decrypted_ref_len);
+    let file_label = match data_path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase().as_str() {
+        "dat" => "DAT-Datei",
+        "ma1" => "MA1 (wie reference.dat)",
+        "ma2" => "MA2 (wie data.dat)",
+        _ => "Unbekannte Datei",
+    };
+
+    println!("📂 Extrahiere {} ({}) → Ziel: {}", data_path.display(), file_label, output_base.display());
+    println!("Entschlüsselte Referenzdatei Größe: {}", decrypted_ref_len);
 
     for i in 0..files_count {
         let name_size = read_u32(&mut ref_file)? as usize;
@@ -54,11 +60,17 @@ pub fn extract_files(data_path: &Path, ref_path: &Path, destination_path: &Path)
         let decrypted_data = match extension.as_str() {
             "ini" => {
                 let mut data = buffer.clone();
-                decrypt_data(&mut data, false).map(|len| data[..len].to_vec()).unwrap_or(buffer)
+                // decrypt_data(&mut data, DecryptKey::Default).map(|len| data[..len].to_vec()).unwrap_or(buffer)
+                let len = decrypt_data_pure(&mut data, DecryptKey::Default);
+                data[..len].to_vec()
+
             }
             "tx1" => {
                 let mut data = buffer.clone();
-                decrypt_data(&mut data, true).map(|len| data[..len].to_vec()).unwrap_or(buffer)
+                // decrypt_data(&mut data, DecryptKey::Texture).map(|len| data[..len].to_vec()).unwrap_or(buffer)
+                let len = decrypt_data_pure(&mut data, DecryptKey::Texture);
+                data[..len].to_vec()
+
             }
             _ => buffer,
         };

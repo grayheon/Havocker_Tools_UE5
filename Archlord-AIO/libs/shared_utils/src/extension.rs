@@ -21,6 +21,8 @@ pub enum FileExtension {
     Png,
     Jpg,
     Tif,
+    Ma1,
+    Ma2,
     Other(String),
 }
 
@@ -43,6 +45,8 @@ impl FileExtension {
             "ecl" => FileExtension::Ecl,
             "bmp" => FileExtension::Bmp,
             "tif" => FileExtension::Tif,
+            "ma1" => FileExtension::Ma1,
+            "ma2" => FileExtension::Ma2,
             _ => FileExtension::Other(lower),
         }
     }
@@ -82,6 +86,8 @@ impl FileExtension {
             FileExtension::Png => "png",
             FileExtension::Jpg => "jpg",
             FileExtension::Tif => "tif",
+            FileExtension::Ma1 => "ma1",
+            FileExtension::Ma2 => "ma2",
             FileExtension::Other(ext) => ext,
         }
     }
@@ -101,6 +107,8 @@ impl FileExtension {
                 | FileExtension::Tif
                 | FileExtension::Dds
                 | FileExtension::Dat
+                | FileExtension::Ma1
+                | FileExtension::Ma2
         )
     }
 }
