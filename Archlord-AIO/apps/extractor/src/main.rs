@@ -1,6 +1,6 @@
 use shared_utils::{
-    ensure_config_file, find_files, load_paths_from_config, process_dat_files,
-    process_regular_files, verify_destination_structure,
+    ensure_config_file, find_files, load_paths_from_config, process_dat_files
+    , verify_destination_structure,
 };
 
 fn main() {
@@ -16,9 +16,7 @@ fn run() -> std::io::Result<()> {
     let (source_path, destination_path) = load_paths_from_config();
     verify_destination_structure(&destination_path)?;
 
-    let files = find_files((&source_path).as_ref());
-
-    process_regular_files(&files, &source_path, &destination_path);
+    let files = find_files(source_path.as_ref());
     process_dat_files(&files, &destination_path);
 
     println!("✅ Extraktion abgeschlossen.");

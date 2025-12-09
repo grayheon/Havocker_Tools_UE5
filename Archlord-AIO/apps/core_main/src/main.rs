@@ -1,4 +1,4 @@
-use shared_utils::{ensure_config_file, load_paths_from_config, prepare_destination, find_files, process_regular_files, process_dat_files, process_ma_files};
+use shared_utils::{ensure_config_file, find_files, load_paths_from_config, prepare_destination, process_dat_files, process_regular_files};
 use std::path::Path;
 use std::process::Command;
 use std::thread;
@@ -13,27 +13,25 @@ fn main() {
 }
 
 fn run() -> std::io::Result<()> {
-    // 1. Konfiguration und Zielordner vorbereiten
     let (source_path, destination_path) = load_paths_from_config();
     prepare_destination(&destination_path)?;
 
-    // 2. Kopieren und Entschlüsseln
     let files = find_files(Path::new(&source_path));
     process_regular_files(&files, &source_path, &destination_path);
     process_dat_files(&files, &destination_path);
-    process_ma_files(&files, &destination_path);
 
-    // 3. Starte parallele Tasks
-    let t_minimap = thread::spawn(|| run_subtool("minimap"));
-    let t_objcheck = thread::spawn(|| run_subtool("obj_checker"));
-    let t_txd = thread::spawn(|| run_subtool("txd_converter"));
+    let handles = [
+        thread::spawn(|| run_subtool("minimap")),
+        thread::spawn(|| run_subtool("obj_checker")),
+        thread::spawn(|| run_subtool("txd_converter")),
+    ];
 
-    // Warten auf parallele Tasks
-    t_minimap.join().unwrap();
-    t_objcheck.join().unwrap();
-    t_txd.join().unwrap();
+    for handle in handles {
+        if let Err(e) = handle.join() {
+            eprintln!("💥 Subtool-Thread ist gepanict: {:?}", e);
+        }
+    }
 
-    // 4. DFF-Scanner ganz am Ende
     run_subtool("dff_scanner");
 
     println!("✅ Alle Tasks abgeschlossen.");

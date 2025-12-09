@@ -4,6 +4,7 @@ use std::{fs, io};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use walkdir::WalkDir;
+use rayon::prelude::*;
 
 pub fn convert_txd_to_dds(root_path: &Path) -> io::Result<()> {
     println!("🔄 Starte TXD → DDS Konvertierung in: {}", root_path.display());
@@ -32,6 +33,16 @@ pub fn convert_txd_to_dds(root_path: &Path) -> io::Result<()> {
 pub fn batch_convert_dds_to_png(destination_root: &Path) -> io::Result<()> {
     println!("🟡 Starte DDS → PNG Konvertierung...");
 
+    let tex_conv_path = "texconv.exe";
+    if !fs::metadata(tex_conv_path).is_ok() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "❌ texconv.exe nicht gefunden!",
+        ));
+    }
+
+    // 1. Alle DDS-Dateien sammeln
+    let mut dds_files = Vec::new();
     for entry in WalkDir::new(destination_root)
         .into_iter()
         .filter_map(Result::ok)
@@ -41,53 +52,63 @@ pub fn batch_convert_dds_to_png(destination_root: &Path) -> io::Result<()> {
                 .map_or(false, |ext| ext.eq_ignore_ascii_case("dds"))
         })
     {
-        let dds_path = entry.path();
+        dds_files.push(entry.path().to_owned());
+    }
 
-        // Zielverzeichnis abhängig davon, ob wir in einem DDS-Ordner sind
-        let png_dir = if dds_path
-            .ancestors()
-            .any(|p| p.file_name().map_or(false, |f| f.eq_ignore_ascii_case("DDS")))
-        {
-            // DDS liegt in ".../TXD/DDS/" → PNG nach ".../TXD/PNG/"
-            dds_path
-                .parent()              // /DDS/
-                .and_then(|p| p.parent()) // /TXD/
-                .map(|txd_dir| txd_dir.join("PNG"))
-                .unwrap_or_else(|| Path::new(".").to_path_buf())
-        } else {
-            // PNG direkt neben der DDS-Datei speichern
-            dds_path
-                .parent()
-                .map(|p| p.to_path_buf())
-                .unwrap_or_else(|| Path::new(".").to_path_buf())
-        };
+    // 2. Parallel verarbeiten
+    let errors: Vec<_> = dds_files
+        .par_iter()
+        .filter_map(|dds_path| {
+            let png_dir = if dds_path
+                .ancestors()
+                .any(|p| p.file_name().map_or(false, |f| f.eq_ignore_ascii_case("DDS")))
+            {
+                dds_path
+                    .parent()
+                    .and_then(|p| p.parent())
+                    .map(|txd_dir| txd_dir.join("PNG"))
+                    .unwrap_or_else(|| Path::new(".").to_path_buf())
+            } else {
+                dds_path
+                    .parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| Path::new(".").to_path_buf())
+            };
 
-        fs::create_dir_all(&png_dir)?;
+            if let Err(e) = fs::create_dir_all(&png_dir) {
+                return Some(format!(
+                    "❌ Fehler beim Erstellen von {}: {}",
+                    png_dir.display(),
+                    e
+                ));
+            }
 
-        if let Err(e) = convert_dds_to_png(dds_path, &png_dir) {
-            eprintln!("❌ Fehler bei {}: {}", dds_path.display(), e);
-        }
+            if let Err(e) = convert_dds_to_png(dds_path, &png_dir, tex_conv_path) {
+                return Some(format!(
+                    "❌ Fehler bei {}: {}",
+                    dds_path.display(),
+                    e
+                ));
+            }
+
+            None::<String>
+        })
+        .collect();
+
+    for msg in errors {
+        eprintln!("{}", msg);
     }
 
     println!("✅ DDS → PNG Konvertierung abgeschlossen.");
     Ok(())
 }
 
-
 // 👇 Helferfunktionen ↓ (gekürzt aus deiner Datei)
-fn convert_dds_to_png(dds_path: &Path, png_target_dir: &Path) -> io::Result<()> {
+fn convert_dds_to_png(dds_path: &Path, png_target_dir: &Path, tex_conv_path: &str) -> io::Result<()> {
     let filename = dds_path.file_stem().unwrap_or_default().to_string_lossy();
     let output_path = png_target_dir.to_str().ok_or_else(|| {
         io::Error::new(io::ErrorKind::Other, "Ungültiger Zielpfad")
     })?;
-
-    let tex_conv_path = "texconv.exe";
-    if !fs::metadata(tex_conv_path).is_ok() {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            "❌ texconv.exe nicht gefunden!",
-        ));
-    }
 
     let status = Command::new(tex_conv_path)
         .args(["-ft", "PNG", "-o", output_path, dds_path.to_str().unwrap()])
@@ -109,6 +130,15 @@ fn convert_dds_to_png(dds_path: &Path, png_target_dir: &Path) -> io::Result<()> 
 
 pub fn process_single_txd(txd_path: &Path) -> io::Result<()> {
     println!("📄 Verarbeite TXD-Datei: {}", txd_path.display());
+
+    let file_meta = fs::metadata(txd_path)?;
+    let file_len = file_meta.len() as usize;
+    if file_len < 0x90 {
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            format!("TXD-Datei zu klein ({file_len} Bytes) – benötige mindestens 0x90"),
+        ));
+    }
 
     let mut file = File::open(txd_path)?;
     println!("📂 Datei erfolgreich geöffnet");
@@ -144,6 +174,16 @@ pub fn process_single_txd(txd_path: &Path) -> io::Result<()> {
             let blocks_w = ((width + 3) / 4) as usize;
             let blocks_h = ((height + 3) / 4) as usize;
             let linear_size = blocks_w * blocks_h * block_size;
+
+            let required = 0x90usize + linear_size;
+            if file_len < required {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    format!(
+                        "TXD zu klein für DXT-Daten: benötigt mindestens {required} Bytes, hat {file_len}"
+                    ),
+                ));
+            }
 
             file.seek(SeekFrom::Start(0x90))?;
             let mut image_data = vec![0u8; linear_size];
