@@ -9,7 +9,8 @@ members = [
     "apps/txd_viewer",
     "libs/shared_utils",
     "apps/meta",
+    "apps/csv_exporter",
     "xtask"
-]
+, "libs/rw_dff", "apps/rw_dump", "libs/rw_dff_model", "apps/rw_model_dump", "apps/rw_unified_dump"]
 
 resolver = "3"
