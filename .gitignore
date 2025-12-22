@@ -86,3 +86,15 @@ fabric.properties
 /Archlord-AIO/xtask/*
 /Archlord-AIO/release_out_*/
 /Archlord-AIO/Archlord-AIO-v*/
+.github/workflows/ci.yml
+.github/workflows/release.yml
+Archlord-AIO/archlord-allinone-tool_source.zip
+Archlord-AIO/h0000a00.dff
+Archlord-AIO/h0000a00.model.json
+Archlord-AIO/h0000a00.tree.json
+Archlord-AIO/h0000a00.unified.json
+Archlord-AIO/h04e0200.dff
+Archlord-AIO/h04e0200.unified.json
+Archlord-AIO/ini-test/characterdatatable.txt
+Archlord-AIO/ini-test/itemdatatable.txt
+Archlord-AIO/ini-test/itemruneattributetable.txt
