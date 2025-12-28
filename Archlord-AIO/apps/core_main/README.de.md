@@ -1,26 +1,33 @@
 # core_main
 
-`core_main` ist das zentrale Orchestrierungswerkzeug der Archlord-AIO Toolchain. Es verwaltet den gesamten Workflow der Datenverarbeitung, vom initialen Kopieren und Extrahieren der Dateien bis hin zur Ausführung spezialisierter Sub-Tools.
+## Deutsch
+**Beschreibung**  
+`core_main` orchestriert die Archlord-AIO-Toolchain: Es liest `config.ini`, bereitet das Ziel-Layout vor, kopiert reguläre Dateien, entpackt `.dat`-Archive und startet die wichtigsten Subtools (`minimap`, `txd_converter`, `dff2gltf`, optional `obj_checker`).
 
-## Funktionen
-- **Konfigurationsmanagement**: Stellt sicher, dass die `config.ini` existiert und lädt Quell- und Zielpfade.
-- **Dateiorganisation**: Kopiert reguläre Dateien und verarbeitet `.dat`-Archive vom Quell- in das Zielverzeichnis.
-- **Sub-Tool-Orchestrierung**: Führt mehrere Sub-Module parallel aus, um die extrahierten Daten zu verarbeiten:
-  - `minimap`: Generiert Weltkarten.
-  - `obj_checker`: Validiert Objekt-Templates und Modelle.
-  - `txd_converter`: Konvertiert Texturen in moderne Formate.
-  - `dff_scanner`: Scannt und validiert Modell-Texturen (wird nach den anderen ausgeführt).
+**Ablauf**  
+- `source_path` und `destination_path` aus `config.ini` laden.  
+- Dateien kopieren und `.dat`-Archive im Ziel entpacken.  
+- Subtools per `cargo run -p <tool>` anstoßen (wo möglich parallel).  
+- Abschlussmeldung ausgeben.
 
-## Funktionsweise
-Das Tool liest Pfade aus einer `config.ini`. Anschließend scannt es das Quellverzeichnis, bereitet das Zielverzeichnis vor und startet die Verarbeitungspipeline. Die meisten spezialisierten Aufgaben werden an andere Binaries innerhalb des Workspaces delegiert, indem `cargo run` verwendet wird.
-
-## Abhängigkeiten
-- **Integriert**: Dieses Tool fungiert als Runner für `minimap`, `obj_checker`, `txd_converter` und `dff_scanner`.
-- **Standalone**: Es kann unabhängig ausgeführt werden, erfordert jedoch eine gültige `config.ini` und die originalen Archlord-Daten.
-- **Bibliotheken**: Verwendet `shared_utils` für die Kernlogik und Dateihandhabung.
-
-## Benutzung
+**Verwendung**  
 ```bash
 cargo run -p core_main
 ```
+`config.ini` muss im Workspace-Root mit gültigen Pfaden liegen.
 
+## English
+**Description**  
+`core_main` orchestrates the Archlord-AIO toolchain: reads `config.ini`, prepares the destination layout, copies regular files, unpacks `.dat` archives, and launches the key subtools (`minimap`, `txd_converter`, `dff2gltf`, optionally `obj_checker`).
+
+**Flow**  
+- Load `source_path` and `destination_path` from `config.ini`.  
+- Copy files and unpack `.dat` archives into the destination.  
+- Trigger subtools via `cargo run -p <tool>` (parallel where possible).  
+- Emit a final summary.
+
+**Usage**  
+```bash
+cargo run -p core_main
+```
+`config.ini` must sit in the workspace root with valid paths.

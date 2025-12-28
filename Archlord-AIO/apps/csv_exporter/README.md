@@ -1,22 +1,31 @@
 # csv_exporter
 
-`csv_exporter` is a tool for converting Archlord's proprietary text-based data tables (found in `.ini` and `.txt` files) into standard, Excel-friendly `.csv` files.
+## English
+**Description**  
+Scans the extracted Archlord data for text-like files (`.ini`, `.txt`), detects tabular content, normalizes encoding (EUC-KR/UTF-8), and emits semicolon-separated CSV copies.
 
-## Features
-- **Legacy Format Support**: Decodes files using various encodings, including UTF-8 (with/without BOM), UTF-16, and EUC-KR (common for Korean Archlord files).
-- **Automatic Delimiter Detection**: Identifies tab-separated values within text files.
-- **Excel Compatibility**: Exports data using a semicolon (`;`) as the separator, which is standard for many European versions of Excel.
-- **Smart Quoting**: Automatically wraps fields containing special characters (semicolons, quotes, etc.) in double quotes to preserve data integrity.
+**How it works**  
+- Reads `destination_path` from `config.ini`.  
+- Recursively visits text files, detects tab-delimited rows, quotes cells safely, and writes a `.csv` next to the source file (folders are created as needed).  
+- Leaves non-tab files untouched.
 
-## How it works
-The tool recursively scans the destination directory for `.ini` and `.txt` files. For each file, it attempts to detect the encoding and identifies if it contains a table structure (primarily tab-delimited). If a table is detected, it converts the rows and columns into a CSV format while handling special character escaping according to CSV specifications.
-
-## Dependencies
-- **Standalone**: Can be run as a standalone utility to convert text tables.
-- **Libraries**: Uses `encoding_rs` for robust character set handling and `shared_utils` for configuration management.
-
-## Usage
+**Usage**  
 ```bash
 cargo run -p csv_exporter
 ```
-The tool automatically processes all supported files in the destination directory specified in your `config.ini`.
+`config.ini` must exist in the workspace root.
+
+## Deutsch
+**Beschreibung**  
+Durchsucht die extrahierten Archlord-Daten nach Textdateien (`.ini`, `.txt`), erkennt tabellarische Inhalte, normalisiert die Kodierung (EUC-KR/UTF-8) und legt Semikolon-separierte CSV-Kopien an.
+
+**Ablauf**  
+- Liest `destination_path` aus `config.ini`.  
+- Läuft rekursiv über Textdateien, erkennt Tab-getrennte Zeilen, quotet sicher und schreibt eine `.csv` neben die Quelldatei (Ordner werden bei Bedarf angelegt).  
+- Nicht-tabellarische Dateien bleiben unverändert.
+
+**Verwendung**  
+```bash
+cargo run -p csv_exporter
+```
+`config.ini` muss im Workspace-Root vorhanden sein.

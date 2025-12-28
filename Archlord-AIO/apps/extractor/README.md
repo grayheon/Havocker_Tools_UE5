@@ -1,22 +1,31 @@
 # extractor
 
-`extractor` is a tool designed to unpack Archlord `.dat` archive files. It reconstructs the internal file structure from these archives into a target directory.
+## English
+**Description**  
+Unpacks Archlord `.dat` archives into the configured destination and recreates the original directory layout.
 
-## Features
-- **DAT Unpacking**: Extracts all files contained within Archlord's proprietary `.dat` format.
-- **Path Reconstruction**: Maintains the original directory hierarchy found within the archives.
-- **Verification**: Checks and ensures the destination directory structure exists before extraction.
+**How it works**  
+- Reads `source_path`/`destination_path` from `config.ini`.  
+- Finds `.dat` files, verifies the destination structure, and extracts entries with `shared_utils`.  
+- Rebuilds folders on the fly while writing files.
 
-## How it works
-The tool identifies `.dat` files in the source directory and processes them using extraction logic implemented in `shared_utils`. It reads the file entries from the DAT header and writes the corresponding data to the destination path, creating necessary subdirectories on the fly.
-
-## Dependencies
-- **Standalone**: Can be run as a standalone extraction utility. It requires a `config.ini` to know where to look for source files and where to extract them.
-- **Integrated**: Part of the `core_main` orchestration, which ensures all required game data is extracted before further processing tools are run.
-- **Libraries**: Uses `shared_utils` for the DAT parsing and extraction logic.
-
-## Usage
+**Usage**  
 ```bash
 cargo run -p extractor
 ```
-The tool uses the source and destination paths defined in your `config.ini` to locate and unpack `.dat` archives.
+Requires a valid `config.ini` in the workspace root.
+
+## Deutsch
+**Beschreibung**  
+Entpackt Archlord-`.dat`-Archive ins konfigurierte Ziel und stellt die Verzeichnisstruktur wieder her.
+
+**Ablauf**  
+- `source_path`/`destination_path` aus `config.ini` laden.  
+- `.dat`-Dateien finden, Zielstruktur prüfen und Einträge mit `shared_utils` extrahieren.  
+- Unterordner bei Bedarf anlegen und Dateien schreiben.
+
+**Verwendung**  
+```bash
+cargo run -p extractor
+```
+Benötigt eine gültige `config.ini` im Workspace-Root.
