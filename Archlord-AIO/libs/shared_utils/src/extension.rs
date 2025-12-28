@@ -26,7 +26,6 @@ pub enum FileExtension {
     Other(String),
 }
 
-
 impl FileExtension {
     pub fn from_str(ext: &str) -> Self {
         let lower = ext.to_lowercase();
@@ -36,7 +35,7 @@ impl FileExtension {
             "xml" => FileExtension::Xml,
             "txd" => FileExtension::Txd,
             "dat" => FileExtension::Dat,
-            "pk"  => FileExtension::Pk,
+            "pk" => FileExtension::Pk,
             "dds" => FileExtension::Dds,
             "wav" => FileExtension::Wav,
             "mp3" => FileExtension::Mp3,
@@ -53,17 +52,17 @@ impl FileExtension {
 
     /// Gibt zurück, ob diese Endung entschlüsselt werden soll (wenn erlaubt)
     pub fn should_decrypt(&self) -> bool {
-        matches!(self, FileExtension::Ini | FileExtension::Txt | FileExtension::Xml)
+        matches!(
+            self,
+            FileExtension::Ini | FileExtension::Txt | FileExtension::Xml
+        )
     }
 
     /// Rückgabe der ggf. umgewandelten Ziel-Endung
     pub fn mapped(&self) -> &str {
         match self {
-            FileExtension::Tx1 => "txd",
             FileExtension::Bm1 => "bmp",
-            FileExtension::Ecl => "dff",
-            FileExtension::Pk  => "wav",
-            FileExtension::Other(ext) => ext,
+            FileExtension::Pk => "wav",
             _ => self.as_str(),
         }
     }
@@ -75,7 +74,7 @@ impl FileExtension {
             FileExtension::Xml => "xml",
             FileExtension::Txd => "txd",
             FileExtension::Dat => "dat",
-            FileExtension::Pk  => "pk",
+            FileExtension::Pk => "pk",
             FileExtension::Dds => "dds",
             FileExtension::Wav => "wav",
             FileExtension::Mp3 => "mp3",
@@ -112,4 +111,3 @@ impl FileExtension {
         )
     }
 }
-

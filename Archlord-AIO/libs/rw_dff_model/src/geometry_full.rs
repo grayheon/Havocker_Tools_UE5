@@ -61,7 +61,10 @@ pub struct GeometryData {
 /// - Only reads UV0 even if more UV sets exist (keeps it deterministic).
 /// - Reads the first morph target's positions/normals (if present).
 /// - Returns `remaining_bytes` to detect unknown trailing data.
-pub fn decode_geometry_struct_full(payload: &[u8]) -> Result<GeometryData, DecodeError> {
+pub fn decode_geometry_struct_full(
+    payload: &[u8],
+    material_count: Option<u16>,
+) -> Result<GeometryData, DecodeError> {
     let mut r = LeReader::new(payload);
 
     let flags = r.read_u32("geometry.flags")?;
@@ -95,8 +98,38 @@ pub fn decode_geometry_struct_full(payload: &[u8]) -> Result<GeometryData, Decod
         // No UVs: keep empty vec (caller decides fallback).
     }
 
-    // --- Prelit ---
+    // --- Prelit (heuristic for engine-modified RW flags) ---
+    let mut has_prelit_effective = has_prelit;
+
     if has_prelit {
+        // English comment: Some engines set the prelit flag but do not store prelit colors.
+        // We detect this by checking whether the next bytes look like the start of the triangle array.
+
+        // Triangle entry is 8 bytes (4x u16). We try the "no-prelit" interpretation first:
+        // If it looks plausible, we assume prelit data is NOT present even if the flag is set.
+        let probe = r.peek_bytes("geometry.prelit.probe", 8)?;
+        let a0 = u16::from_le_bytes([probe[0], probe[1]]) as u32;
+        let a1 = u16::from_le_bytes([probe[2], probe[3]]) as u32;
+        let a2 = u16::from_le_bytes([probe[4], probe[5]]) as u32;
+        let a3 = u16::from_le_bytes([probe[6], probe[7]]) as u32;
+
+        // We test two common RW triangle layouts:
+        // Layout L1: i0, i1, i2, mat
+        // Layout L2: mat, i0, i1, i2
+        let v_ok_l1 = a0 < num_vertices && a1 < num_vertices && a2 < num_vertices;
+        let v_ok_l2 = a1 < num_vertices && a2 < num_vertices && a3 < num_vertices;
+
+        let m_ok_l1 = material_count.map(|mc| a3 < mc as u32).unwrap_or(true);
+        let m_ok_l2 = material_count.map(|mc| a0 < mc as u32).unwrap_or(true);
+
+        // If triangles look plausible right here, we treat prelit as absent.
+        if (v_ok_l1 && m_ok_l1) || (v_ok_l2 && m_ok_l2) {
+            has_prelit_effective = false;
+        }
+    }
+
+    // Only skip prelit colors if they are effectively present.
+    if has_prelit_effective {
         let skip = (num_vertices as usize).saturating_mul(4);
         r.read_bytes("geometry.prelit.skip", skip)?;
     }
@@ -104,10 +137,28 @@ pub fn decode_geometry_struct_full(payload: &[u8]) -> Result<GeometryData, Decod
     // --- Triangles ---
     let mut triangles = Vec::with_capacity(num_triangles as usize);
     for _ in 0..num_triangles {
-        let i0 = r.read_u16("geometry.tri.i0")?;
-        let i1 = r.read_u16("geometry.tri.i1")?;
-        let i2 = r.read_u16("geometry.tri.i2")?;
-        let mat = r.read_u16("geometry.tri.mat")?;
+        let w0 = r.read_u16("geometry.tri.w0")?;
+        let w1 = r.read_u16("geometry.tri.w1")?;
+        let w2 = r.read_u16("geometry.tri.w2")?;
+        let w3 = r.read_u16("geometry.tri.w3")?;
+
+        // English comment: Support both common RW on-disk triangle layouts.
+        // Prefer the layout that yields a plausible material index.
+        let (i0, i1, i2, mat) = if material_count
+            .map(|mc| (w3 as u32) < mc as u32)
+            .unwrap_or(false)
+        {
+            (w0, w1, w2, w3) // i0,i1,i2,mat
+        } else if material_count
+            .map(|mc| (w0 as u32) < mc as u32)
+            .unwrap_or(false)
+        {
+            (w1, w2, w3, w0) // mat,i0,i1,i2
+        } else {
+            // Fallback: classic layout (keeps deterministic behavior)
+            (w0, w1, w2, w3)
+        };
+
         triangles.push(RwTriangle {
             i0,
             i1,

@@ -1,6 +1,6 @@
 use shared_utils::{
-    ensure_config_file, find_files, load_paths_from_config, process_dat_files
-    , verify_destination_structure,
+    ensure_config_file, find_files, load_paths_from_config, process_dat_files,
+    verify_destination_structure,
 };
 
 fn main() {

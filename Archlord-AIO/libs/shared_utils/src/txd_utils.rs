@@ -1,4 +1,4 @@
-use crate::conversion::{batch_convert_dds_to_png, convert_txd_to_dds};
+use crate::conversion::convert_txd_to_dds;
 use std::{fs, path::Path};
 use walkdir::WalkDir;
 
@@ -7,7 +7,6 @@ pub fn process_txd_pipeline(destination_path: &str) -> std::io::Result<()> {
     organize_txd_structure(path)?;
     println!("🟡 Starte TXD → DDS Konvertierung...");
     convert_txd_to_dds(path)?;
-    batch_convert_dds_to_png(path)?;
     println!("🟢 TXD → DDS Konvertierung beendet.");
     Ok(())
 }
@@ -25,7 +24,7 @@ pub fn organize_txd_structure(destination_root: &Path) -> std::io::Result<()> {
             let is_file = path.is_file();
             let is_txd = path
                 .extension()
-                .map(|ext| ext.eq_ignore_ascii_case("txd"))
+                .map(|ext| ext.eq_ignore_ascii_case("txd") || ext.eq_ignore_ascii_case("tx1"))
                 .unwrap_or(false);
             let in_skipped_folder = path.ancestors().any(|p| {
                 p.file_name()

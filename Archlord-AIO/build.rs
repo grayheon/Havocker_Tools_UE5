@@ -17,8 +17,7 @@ fn main() {
     let texconv_dst = target_dir.join("texconv.exe");
 
     if !texconv_dst.exists() {
-        fs::copy(&texconv_src, &texconv_dst)
-            .expect("❌ Fehler beim Kopieren von texconv.exe");
+        fs::copy(&texconv_src, &texconv_dst).expect("❌ Fehler beim Kopieren von texconv.exe");
         println!("✅ texconv.exe nach {:?} kopiert", texconv_dst);
     } else {
         println!("ℹ️  texconv.exe existiert bereits in {:?}", texconv_dst);

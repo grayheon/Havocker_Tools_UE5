@@ -16,7 +16,8 @@ fn load_ini_euckr(path: &Path) -> std::io::Result<Ini> {
     let mut ini = Ini::new();
     let mut content = String::new();
     reader.read_to_string(&mut content)?;
-    ini.read(content).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    ini.read(content)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     Ok(ini)
 }
 
@@ -25,7 +26,10 @@ pub fn process_obj_templates(destination_root: &Path) -> std::io::Result<()> {
     let object_template = load_ini_euckr(&object_template_path)?;
     let all_dff_files = collect_all_dff_names(destination_root)?;
 
-    for entry in WalkDir::new(destination_root).into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(destination_root)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         if !entry.file_type().is_file() {
             continue;
         }
@@ -48,7 +52,10 @@ pub fn process_obj_templates(destination_root: &Path) -> std::io::Result<()> {
                 let mut proof_entries = Vec::new();
                 let mut error_entries = Vec::new();
 
-                writeln!(csv_file, "ID,TID,DFF,COLLISION_DFF,PICK_DFF,SCALE_X,SCALE_Y,SCALE_Z,POS_X,POS_Y,POS_Z,DEGREE_X,DEGREE_Y,BLUEPRINT_CLASS")?;
+                writeln!(
+                    csv_file,
+                    "ID,TID,DFF,COLLISION_DFF,PICK_DFF,SCALE_X,SCALE_Y,SCALE_Z,POS_X,POS_Y,POS_Z,DEGREE_X,DEGREE_Y,BLUEPRINT_CLASS"
+                )?;
 
                 let mut written_rows = 0;
 
@@ -114,13 +121,17 @@ pub fn process_obj_templates(destination_root: &Path) -> std::io::Result<()> {
                     }
                 }
 
-                let section_count = ini.sections()
+                let section_count = ini
+                    .sections()
                     .iter()
                     .filter(|s| s.to_ascii_lowercase() != "header" && ini.get(s, "TID").is_some())
                     .count();
 
                 if written_rows != section_count {
-                    println!("⚠️  Warnung: INI-Sektionen: {}, CSV-Zeilen: {} → Unterschied!", section_count, written_rows);
+                    println!(
+                        "⚠️  Warnung: INI-Sektionen: {}, CSV-Zeilen: {} → Unterschied!",
+                        section_count, written_rows
+                    );
                 } else {
                     println!("✅ CSV enthält exakt alle {} Sektionen.", section_count);
                 }
@@ -136,7 +147,10 @@ pub fn validate_tids_against_objecttemplate(destination_root: &Path) -> std::io:
     let object_template = load_ini_euckr(&object_template_path)?;
     let mut all_tids = HashSet::new();
 
-    for entry in WalkDir::new(destination_root).into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(destination_root)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         if entry.file_type().is_file() {
             let path = entry.path();
             if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
@@ -179,7 +193,11 @@ pub fn validate_tids_against_objecttemplate(destination_root: &Path) -> std::io:
         writeln!(missing_file, "{}", m)?;
     }
 
-    println!("✅ TID Prüfung abgeschlossen: {} gültig, {} fehlen", valid.len(), missing.len());
+    println!(
+        "✅ TID Prüfung abgeschlossen: {} gültig, {} fehlen",
+        valid.len(),
+        missing.len()
+    );
 
     Ok(())
 }
@@ -189,14 +207,19 @@ pub fn extract_and_check_dff_files(destination_root: &Path) -> std::io::Result<(
     let object_template = load_ini_euckr(&object_template_path)?;
     let mut dff_names = HashSet::new();
 
-    for section in object_template.sections().iter().filter(|s| s.to_ascii_lowercase() != "header") {
+    for section in object_template
+        .sections()
+        .iter()
+        .filter(|s| s.to_ascii_lowercase() != "header")
+    {
         for key in ["5", "10", "25"] {
             if let Some(value) = object_template.get(&section, key) {
                 let dff = extract_clean_value(Some(&value));
                 if !dff.is_empty()
                     && !["DFF", "COLLISION_DFF", "PICK_DFF"].contains(&dff.as_str())
                     && !dff.to_ascii_uppercase().contains("AGCM")
-                    && dff.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                    && dff.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                {
                     dff_names.insert(dff.to_ascii_uppercase());
                 }
             }
@@ -258,7 +281,9 @@ fn extract_clean_value(opt: Option<&String>) -> String {
 }
 
 fn get_base_name(path: &Path) -> Option<String> {
-    path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string())
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_string())
 }
 
 fn find_objecttemplate(destination_root: &Path) -> std::io::Result<PathBuf> {
@@ -267,15 +292,23 @@ fn find_objecttemplate(destination_root: &Path) -> std::io::Result<PathBuf> {
         .filter_map(Result::ok)
         .find(|e| e.file_type().is_file() && e.file_name() == "objecttemplate.ini")
         .map(|e| e.into_path())
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "objecttemplate.ini nicht gefunden"))
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "objecttemplate.ini nicht gefunden",
+            )
+        })
 }
 
 fn collect_all_dff_names(destination_root: &Path) -> std::io::Result<HashSet<String>> {
     let mut result = HashSet::new();
-    for entry in WalkDir::new(destination_root).into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(destination_root)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         if entry.file_type().is_file() {
             if let Some(ext) = entry.path().extension() {
-                if ext.eq_ignore_ascii_case("dff") {
+                if ext.eq_ignore_ascii_case("dff") || ext.eq_ignore_ascii_case("ecl") {
                     if let Some(stem) = entry.path().file_stem().and_then(|s| s.to_str()) {
                         result.insert(stem.to_ascii_uppercase());
                     }

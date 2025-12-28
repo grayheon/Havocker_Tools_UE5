@@ -26,7 +26,9 @@ pub enum RwReadError {
     #[error("unexpected EOF while reading chunk header")]
     UnexpectedEof,
 
-    #[error("chunk payload exceeds file bounds: header at 0x{header_off:X}, payload_end=0x{payload_end:X}, file_len=0x{file_len:X}")]
+    #[error(
+        "chunk payload exceeds file bounds: header at 0x{header_off:X}, payload_end=0x{payload_end:X}, file_len=0x{file_len:X}"
+    )]
     OutOfBounds {
         header_off: u64,
         payload_end: u64,
@@ -69,7 +71,7 @@ impl<R: Read + Seek> RwChunkReader<R> {
 
     /// Returns the current stream position.
     pub fn position(&mut self) -> Result<u64, RwReadError> {
-        Ok(self.inner.seek(SeekFrom::Current(0))?)
+        Ok(self.inner.stream_position()?)
     }
 
     /// Seeks to an absolute position.

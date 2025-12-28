@@ -7,17 +7,19 @@
 //! This crate depends on `rw_dff` for the chunk tree and uses offsets to read
 //! payload bytes from the original file.
 
+pub mod binmesh;
 pub mod geometry;
+pub mod geometry_full;
 pub mod json;
+pub mod material;
+pub mod plugins;
 pub mod scan;
-pub mod util;
-mod texture;
-mod plugins;
-mod material;
-mod binmesh;
-mod geometry_full;
-mod unified;
+pub mod skeleton;
+pub mod skin;
+pub mod texture;
+pub mod unified;
 pub mod unified_scan;
+pub mod util;
 
 use crate::json::DffModelReport;
 use crate::scan::scan_geometry_structs;

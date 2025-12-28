@@ -20,7 +20,7 @@ pub struct RwChunkNode {
 impl RwChunkNode {
     /// Returns the total size of this chunk on disk (header + payload).
     pub fn total_size(&self) -> u64 {
-        (self.payload_end - self.header_off) as u64
+        self.payload_end - self.header_off
     }
 }
 

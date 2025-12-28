@@ -35,21 +35,24 @@ impl eframe::App for TxdViewerApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("TXD Texture Debug Viewer");
 
-            if ui.button("Load TXD file").clicked() {
-                if let Some(path) = rfd::FileDialog::new().pick_file() {
-                    self.file_path = Some(path.clone());
-                    if let Ok(data) = fs::read(&path) {
-                        self.image = extract_image(
-                            &data,
-                            &*path,
-                            self.offset,
-                            self.x_shift,
-                            self.y_shift,
-                            self.x_jump_start,
-                            self.y_jump,
-                        );
-                    }
-                }
+            if let Some(path) = ui
+                .button("Load TXD file")
+                .clicked()
+                .then(|| rfd::FileDialog::new().pick_file())
+                .flatten()
+            {
+                self.file_path = Some(path.clone());
+                self.image = fs::read(&path).ok().and_then(|data| {
+                    extract_image(
+                        &data,
+                        &path,
+                        self.offset,
+                        self.x_shift,
+                        self.y_shift,
+                        self.x_jump_start,
+                        self.y_jump,
+                    )
+                });
             }
 
             ui.add(egui::Slider::new(&mut self.offset, 0..=10_000).text("Offset"));
@@ -62,20 +65,23 @@ impl eframe::App for TxdViewerApp {
                 ui.label(format!("Loaded: {}", path.display()));
             }
 
-            if ui.button("Regenerate image").clicked() {
-                if let Some(path) = &self.file_path {
-                    if let Ok(data) = fs::read(path) {
-                        self.image = extract_image(
-                            &data,
-                            path,
-                            self.offset,
-                            self.x_shift,
-                            self.y_shift,
-                            self.x_jump_start,
-                            self.y_jump,
-                        );
-                    }
-                }
+            if let Some(path) = ui
+                .button("Regenerate image")
+                .clicked()
+                .then(|| self.file_path.clone())
+                .flatten()
+            {
+                self.image = fs::read(&path).ok().and_then(|data| {
+                    extract_image(
+                        &data,
+                        &path,
+                        self.offset,
+                        self.x_shift,
+                        self.y_shift,
+                        self.x_jump_start,
+                        self.y_jump,
+                    )
+                });
             }
 
             if let Some(img) = &self.image {
@@ -152,9 +158,9 @@ fn extract_image(
 fn main() {
     let options = eframe::NativeOptions::default();
     eframe::run_native(
-        &*"TXD Viewer".to_string(),
+        "TXD Viewer",
         options,
         Box::new(|_cc| Ok(Box::new(TxdViewerApp::default()))),
     )
-        .expect("TODO: panic message");
+    .expect("TODO: panic message");
 }

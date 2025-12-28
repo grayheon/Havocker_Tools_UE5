@@ -23,23 +23,29 @@ pub fn generate_world_map(destination_root: &Path) -> std::io::Result<()> {
             let tile_parts = map_tiles.get(&key);
             let merged_tile = match tile_parts {
                 Some(parts) => merge_tile_parts(parts, &tile_size)?,
-                None => ImageBuffer::from_pixel(big_tile_size.0, big_tile_size.1, Rgba([0, 0, 0, 255]))
+                None => {
+                    ImageBuffer::from_pixel(big_tile_size.0, big_tile_size.1, Rgba([0, 0, 0, 255]))
+                }
             };
 
             let px = (x - 17) * big_tile_size.0;
             let py = (y - 19) * big_tile_size.1;
-            worldmap.copy_from(&merged_tile, px as u32, py as u32)
+            worldmap
+                .copy_from(&merged_tile, px as u32, py as u32)
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         }
     }
 
-    let ext = map_tiles.values().next()
+    let ext = map_tiles
+        .values()
+        .next()
         .and_then(|map| map.values().next())
         .and_then(|p| p.extension().and_then(|e| e.to_str()))
         .unwrap_or("png");
 
     let output_path = minimap_dir.join(format!("worldmap.{}", ext));
-    worldmap.save(&output_path)
+    worldmap
+        .save(&output_path)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     println!("✅ Weltkarte gespeichert: {}", output_path.display());
@@ -54,7 +60,10 @@ fn find_minimap_folder(root: &Path) -> std::io::Result<PathBuf> {
             return Ok(entry.into_path());
         }
     }
-    Err(std::io::Error::new(std::io::ErrorKind::NotFound, "minimap-Ordner nicht gefunden"))
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "minimap-Ordner nicht gefunden",
+    ))
 }
 
 fn collect_map_tiles(dir: &Path) -> std::io::Result<HashMap<String, HashMap<char, PathBuf>>> {
@@ -62,7 +71,9 @@ fn collect_map_tiles(dir: &Path) -> std::io::Result<HashMap<String, HashMap<char
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_file() { continue; }
+        if !path.is_file() {
+            continue;
+        }
 
         let filename = path.file_stem().and_then(|f| f.to_str()).unwrap_or("");
         let chars: Vec<char> = filename.chars().collect();
@@ -70,25 +81,40 @@ fn collect_map_tiles(dir: &Path) -> std::io::Result<HashMap<String, HashMap<char
             let tile_key = &filename[..7];
             let part = chars[7];
             if ['a', 'b', 'c', 'd'].contains(&part) {
-                map_tiles.entry(tile_key.to_string()).or_default().insert(part, path);
+                map_tiles
+                    .entry(tile_key.to_string())
+                    .or_default()
+                    .insert(part, path);
             }
         }
     }
     Ok(map_tiles)
 }
 
-fn find_tile_dimensions(map_tiles: &HashMap<String, HashMap<char, PathBuf>>) -> std::io::Result<(u32, u32)> {
-    for parts in map_tiles.values() {
-        for path in parts.values() {
-            let img = image::open(path)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-            return Ok(img.dimensions());
-        }
-    }
-    Err(std::io::Error::new(std::io::ErrorKind::Other, "Keine gültigen Bilddateien gefunden"))
+fn find_tile_dimensions(
+    map_tiles: &HashMap<String, HashMap<char, PathBuf>>,
+) -> std::io::Result<(u32, u32)> {
+    map_tiles
+        .values()
+        .flat_map(|parts| parts.values())
+        .find_map(|path| {
+            image::open(path)
+                .map(|img| img.dimensions())
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+                .ok()
+        })
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Keine gueltigen Bilddateien gefunden",
+            )
+        })
 }
 
-fn merge_tile_parts(parts: &HashMap<char, PathBuf>, tile_size: &(u32, u32)) -> std::io::Result<ImageBuffer<Rgba<u8>, Vec<u8>>> {
+fn merge_tile_parts(
+    parts: &HashMap<char, PathBuf>,
+    tile_size: &(u32, u32),
+) -> std::io::Result<ImageBuffer<Rgba<u8>, Vec<u8>>> {
     let (w, h) = *tile_size;
     let mut big_tile = ImageBuffer::from_pixel(w * 2, h * 2, Rgba([0, 0, 0, 255]));
     let positions = [('a', 0, 0), ('b', w, 0), ('c', 0, h), ('d', w, h)];
@@ -98,7 +124,8 @@ fn merge_tile_parts(parts: &HashMap<char, PathBuf>, tile_size: &(u32, u32)) -> s
             let img = image::open(path)
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
                 .into_rgba8();
-            big_tile.copy_from(&img, x, y)
+            big_tile
+                .copy_from(&img, x, y)
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         }
     }

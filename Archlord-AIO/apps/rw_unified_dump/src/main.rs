@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 /// cargo run -p rw_unified_dump -- h0000a00.dff > h0000a00.unified.json
 /// cargo run -p rw_unified_dump -- h04e0200.dff > h04e0200.unified.json
-
+///
 /// Dumps an export-ready unified mesh representation.
 ///
 /// # Usage

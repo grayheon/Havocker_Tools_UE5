@@ -1,4 +1,7 @@
-use shared_utils::{ensure_config_file, find_files, load_paths_from_config, prepare_destination, process_dat_files, process_regular_files};
+use shared_utils::{
+    ensure_config_file, find_files, load_paths_from_config, prepare_destination, process_dat_files,
+    process_regular_files,
+};
 use std::path::Path;
 use std::process::Command;
 use std::thread;
@@ -32,7 +35,8 @@ fn run() -> std::io::Result<()> {
         }
     }
 
-    run_subtool("dff_scanner");
+    //run_subtool("dff_scanner");
+    run_subtool("dff2gltf");
 
     println!("✅ Alle Tasks abgeschlossen.");
     Ok(())
@@ -47,7 +51,10 @@ fn run_subtool(tool_name: &str) {
 
     match status {
         Ok(exit) if exit.success() => println!("✅ Tool {tool_name} abgeschlossen.\n"),
-        Ok(exit) => println!("❌ Tool {tool_name} Fehlercode: {}\n", exit.code().unwrap_or(-1)),
+        Ok(exit) => println!(
+            "❌ Tool {tool_name} Fehlercode: {}\n",
+            exit.code().unwrap_or(-1)
+        ),
         Err(err) => println!("💥 Fehler beim Start von {tool_name}: {err}"),
     }
 }

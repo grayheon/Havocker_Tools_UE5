@@ -1,6 +1,6 @@
-use std::{fs, io, path::Path};
-use std::io::Write;
 use configparser::ini::Ini;
+use std::io::Write;
+use std::{fs, io, path::Path};
 
 #[cfg(target_os = "windows")]
 fn open_config_in_editor() {
@@ -49,7 +49,9 @@ pub fn load_config(filename: &str) -> Ini {
 pub fn load_paths_from_config() -> (String, String) {
     let config = load_config("config.ini");
     let source = config.get("PATHS", "SOURCE").expect("Fehler: SOURCE fehlt");
-    let dest = config.get("PATHS", "DESTINATION").expect("Fehler: DESTINATION fehlt");
+    let dest = config
+        .get("PATHS", "DESTINATION")
+        .expect("Fehler: DESTINATION fehlt");
     (source, dest)
 }
 
@@ -62,7 +64,10 @@ pub fn prepare_destination(destination_path: &str) -> io::Result<()> {
 
     let dest_path = Path::new(destination_path);
     if !dest_path.is_absolute() {
-        panic!("Fehler: Zielverzeichnis muss absolut sein: {}", destination_path);
+        panic!(
+            "Fehler: Zielverzeichnis muss absolut sein: {}",
+            destination_path
+        );
     }
 
     fs::create_dir_all(dest_path)?;
@@ -71,7 +76,10 @@ pub fn prepare_destination(destination_path: &str) -> io::Result<()> {
 
 fn clear_destination_folder(destination_path: &Path) -> io::Result<()> {
     if destination_path.exists() && destination_path.read_dir()?.next().is_some() {
-        println!("⚠️  Zielordner nicht leer. Lösche: {}", destination_path.display());
+        println!(
+            "⚠️  Zielordner nicht leer. Lösche: {}",
+            destination_path.display()
+        );
         fs::remove_dir_all(destination_path)?;
         println!("✅ Zielordner wurde geleert.");
     } else {

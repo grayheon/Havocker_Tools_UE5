@@ -1,4 +1,4 @@
-use shared_utils::{ensure_config_file, load_paths_from_config, generate_world_map};
+use shared_utils::{ensure_config_file, generate_world_map, load_paths_from_config};
 use std::path::Path;
 
 fn main() {

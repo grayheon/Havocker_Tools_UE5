@@ -4,7 +4,11 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum DecodeError {
     #[error("unexpected EOF while reading {what}, need {need} bytes, have {have}")]
-    UnexpectedEof { what: &'static str, need: usize, have: usize },
+    UnexpectedEof {
+        what: &'static str,
+        need: usize,
+        have: usize,
+    },
 
     #[error("invalid value for {what}: {value}")]
     InvalidValue { what: &'static str, value: u64 },
@@ -40,6 +44,11 @@ impl<'a> LeReader<'a> {
     /// Returns the total length of the buffer.
     pub fn len(&self) -> usize {
         self.buf.len()
+    }
+
+    /// Returns true if the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.buf.is_empty()
     }
 
     /// Reads exactly `n` bytes.
@@ -81,5 +90,24 @@ impl<'a> LeReader<'a> {
     pub fn read_u16(&mut self, what: &'static str) -> Result<u16, DecodeError> {
         let b = self.read_bytes(what, 2)?;
         Ok(u16::from_le_bytes([b[0], b[1]]))
+    }
+}
+impl<'a> LeReader<'a> {
+    /// Returns the next `len` bytes without advancing the cursor.
+    ///
+    /// # Behavior
+    /// - Performs strict bounds checks.
+    /// - Does not modify internal state.
+    pub fn peek_bytes(&self, what: &'static str, len: usize) -> Result<&'a [u8], DecodeError> {
+        let start = self.pos;
+        let end = start.saturating_add(len);
+        if end > self.buf.len() {
+            return Err(DecodeError::UnexpectedEof {
+                what,
+                need: len,
+                have: self.buf.len().saturating_sub(start),
+            });
+        }
+        Ok(&self.buf[start..end])
     }
 }

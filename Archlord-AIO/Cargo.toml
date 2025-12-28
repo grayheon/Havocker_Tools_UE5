@@ -11,6 +11,6 @@ members = [
     "apps/meta",
     "apps/csv_exporter",
     "xtask"
-, "libs/rw_dff", "apps/rw_dump", "libs/rw_dff_model", "apps/rw_model_dump", "apps/rw_unified_dump"]
+, "libs/rw_dff", "apps/rw_dump", "libs/rw_dff_model", "apps/rw_model_dump", "apps/rw_unified_dump", "apps/dff2gltf", "libs/gltf_writer"]
 
 resolver = "3"

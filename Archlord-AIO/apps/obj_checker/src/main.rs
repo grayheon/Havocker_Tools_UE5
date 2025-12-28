@@ -1,9 +1,6 @@
 use shared_utils::{
-    ensure_config_file,
-    load_paths_from_config,
-    process_obj_templates,
+    ensure_config_file, extract_and_check_dff_files, load_paths_from_config, process_obj_templates,
     validate_tids_against_objecttemplate,
-    extract_and_check_dff_files,
 };
 
 fn main() {

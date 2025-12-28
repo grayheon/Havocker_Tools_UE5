@@ -1,6 +1,6 @@
 use md5::{Digest, Md5};
-use rc4::{KeyInit, Rc4, StreamCipher};
 use rc4::consts::U16;
+use rc4::{KeyInit, Rc4, StreamCipher};
 
 #[derive(Debug, Clone, Copy)]
 pub enum DecryptKey {

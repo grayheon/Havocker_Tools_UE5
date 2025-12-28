@@ -7,6 +7,7 @@
 
 pub mod ids;
 pub mod json;
+pub mod plugins;
 pub mod policy;
 pub mod reader;
 pub mod tree;

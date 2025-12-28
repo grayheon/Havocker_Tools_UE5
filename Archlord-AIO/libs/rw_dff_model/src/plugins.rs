@@ -1,5 +1,5 @@
 use crate::util::DecodeError;
-use rw_dff::ids::ids;
+use rw_dff::ids;
 use rw_dff::tree::RwChunkNode;
 use serde::Serialize;
 /// A minimal, deterministic description of one plugin/extension chunk.
@@ -49,7 +49,6 @@ pub fn collect_extension_plugins(ext: &RwChunkNode, file_bytes: &[u8]) -> Vec<Pl
             let kind = match c.header.id {
                 ids::BINMESH_PLG => Some("BinMeshPLG".to_string()),
                 ids::SKYLINE_MESH => Some("SkylineMesh".to_string()),
-                ids::SKYLINE_NATIVEDATA => Some("SkylineNativeData".to_string()),
                 ids::SKYLINE_DUMMY => Some("SkylineDummy".to_string()),
                 _ => None,
             };

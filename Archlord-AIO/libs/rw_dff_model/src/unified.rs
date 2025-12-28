@@ -15,6 +15,7 @@ pub struct UnifiedMesh {
     pub triangles: Vec<Tri>, // triangle list with material indices
     pub submeshes: Vec<Submesh>,
     pub materials: Vec<UnifiedMaterial>,
+    pub skin: Option<MeshSkin>,
 }
 
 /// Helper geometry that we keep for forensics/debugging.
@@ -29,11 +30,13 @@ pub struct HelperMesh {
 ///
 /// # Behavior
 /// - UV0 is optional; if missing in a file, it is set to (0,0) deterministically.
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Vertex {
     pub pos: Vec3,
     pub nrm: Vec3,
-    pub uv0: Vec2,
+    pub uv: Vec<Vec2>,
+    pub joints: [u16; 4],
+    pub weights: [f32; 4],
 }
 
 /// Triangle in Unified representation.
@@ -48,8 +51,10 @@ pub struct Tri {
 /// One submesh: triangles belonging to one material.
 #[derive(Debug, Clone, Serialize)]
 pub struct Submesh {
-    pub material_index: u16,
-    pub triangle_indices: Vec<u32>, // indices into `UnifiedMesh.triangles`
+    pub material_index: u32,
+    pub indices: Vec<u32>,
+    /// True if original topology is TRIANGLE_STRIP.
+    pub is_strip: bool,
 }
 
 /// Material description used by UnifiedMesh.
@@ -57,6 +62,13 @@ pub struct Submesh {
 pub struct UnifiedMaterial {
     pub material_index: u32,
     pub base_texture_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MeshSkin {
+    pub bone_count: u32,
+    pub used_bones: Vec<u32>,
+    pub inverse_bind_matrices: Vec<[f32; 16]>,
 }
 
 /// Builds a UnifiedMesh from decoded GeometryData and decoded MaterialList.
@@ -70,37 +82,46 @@ pub fn build_unified_mesh(
     geometry_header_off: u64,
     geo: &GeometryData,
     materials: Option<&MaterialListInfo>,
+    submeshes: Vec<Submesh>,
+    skin: Option<&crate::skin::SkinData>,
 ) -> UnifiedMesh {
     let vcount = geo.num_vertices as usize;
 
     // Build vertices
     let mut vertices = Vec::with_capacity(vcount);
     for i in 0..vcount {
-        let pos = geo.positions.get(i).copied().unwrap_or(Vec3 { x: 0.0, y: 0.0, z: 0.0 });
-        let nrm = geo.normals.get(i).copied().unwrap_or(Vec3 { x: 0.0, y: 0.0, z: 0.0 });
-        let uv0 = geo.uvs0.get(i).copied().unwrap_or(Vec2 { x: 0.0, y: 0.0 });
-        vertices.push(Vertex { pos, nrm, uv0 });
+        let pos = geo.positions.get(i).copied().unwrap_or(Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        });
+        let nrm = geo.normals.get(i).copied().unwrap_or(Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        });
+
+        // Archlord assets often use engine/native UV streams.
+        // We only take available UV sets.
+        let mut uv = Vec::new();
+        if !geo.uvs0.is_empty() {
+            uv.push(geo.uvs0.get(i).copied().unwrap_or(Vec2 { x: 0.0, y: 0.0 }));
+        }
+
+        vertices.push(Vertex {
+            pos,
+            nrm,
+            uv,
+            joints: [0; 4],
+            weights: [0.0; 4],
+        });
     }
 
-    // Build triangle list
+    // Build triangle list (debug/info only; topology should come from BinMeshPLG when present)
     let mut triangles = Vec::with_capacity(geo.triangles.len());
     for t in &geo.triangles {
         triangles.push(convert_tri(*t));
     }
-
-    // Build submeshes by grouping triangle indices by material_index
-    let mut buckets: std::collections::BTreeMap<u16, Vec<u32>> = std::collections::BTreeMap::new();
-    for (ti, t) in triangles.iter().enumerate() {
-        buckets.entry(t.material_index).or_default().push(ti as u32);
-    }
-
-    let submeshes = buckets
-        .into_iter()
-        .map(|(mat, tri_idx)| Submesh {
-            material_index: mat,
-            triangle_indices: tri_idx,
-        })
-        .collect::<Vec<_>>();
 
     // Build materials list (base texture per material index)
     let mut mats_out = Vec::new();
@@ -114,12 +135,42 @@ pub fn build_unified_mesh(
         }
     }
 
+    // Apply skinning data if available
+    let mut skin_out = None;
+    if let Some(sk) = skin {
+        let max_w = sk.max_weights as usize;
+        let used_len = sk.used_bone_indices.len();
+        for i in 0..vcount {
+            for j in 0..4 {
+                let idx_off = i * max_w + j;
+                if idx_off >= sk.indices.len() || idx_off >= sk.weights.len() {
+                    break;
+                }
+                let raw_idx = sk.indices[idx_off] as usize;
+                let joint = if raw_idx < used_len {
+                    sk.used_bone_indices[raw_idx] as u16
+                } else {
+                    0
+                };
+                let w = sk.weights[idx_off];
+                vertices[i].joints[j] = joint;
+                vertices[i].weights[j] = w;
+            }
+        }
+        skin_out = Some(MeshSkin {
+            bone_count: sk.bone_count,
+            used_bones: sk.used_bone_indices.clone(),
+            inverse_bind_matrices: sk.inverse_bind_matrices.clone(),
+        });
+    }
+
     UnifiedMesh {
         source_geometry_header_off: geometry_header_off,
         vertices,
         triangles,
         submeshes,
         materials: mats_out,
+        skin: skin_out,
     }
 }
 

@@ -1,10 +1,11 @@
 use rw_dff::json::to_json;
 use rw_dff::parse_file;
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 
 /// cargo run -p rw_dump -- h0000a00.dff > h0000a00.tree.json
-
+///
 /// Simple RenderWare chunk tree dumper.
 ///
 /// # Usage
@@ -35,16 +36,22 @@ fn main() {
         }
     };
 
-    match parse_file(&path) {
-        Ok(root) => {
-            let json = to_json(&root);
-            let out = serde_json::to_string_pretty(&json)
-                .expect("failed to serialize chunk tree to JSON");
-            println!("{}", out);
-        }
+    match fs::read(&path) {
+        Ok(bytes) => match parse_file(&path) {
+            Ok(root) => {
+                let json = to_json(&root, &bytes);
+                let out = serde_json::to_string_pretty(&json)
+                    .expect("failed to serialize chunk tree to JSON");
+                println!("{}", out);
+            }
+            Err(e) => {
+                eprintln!("Error parsing {:?}: {}", path, e);
+                std::process::exit(2);
+            }
+        },
         Err(e) => {
-            eprintln!("Error parsing {:?}: {}", path, e);
-            std::process::exit(2);
+            eprintln!("Error reading {:?}: {}", path, e);
+            std::process::exit(1);
         }
     }
 }

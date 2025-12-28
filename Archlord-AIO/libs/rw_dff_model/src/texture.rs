@@ -1,9 +1,9 @@
 use crate::util::DecodeError;
-use rw_dff::ids::ids;
+use rw_dff::ids;
 use rw_dff::tree::RwChunkNode;
 use serde::Serialize;
 
-use crate::plugins::{collect_extension_plugins, PluginEntry};
+use crate::plugins::{PluginEntry, collect_extension_plugins};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TextureInfo {
@@ -39,7 +39,6 @@ pub fn decode_rw_string(payload: &[u8]) -> Result<RwString, DecodeError> {
     Ok(RwString { value })
 }
 
-
 /// Decodes a Texture chunk (0x06) inside a Material.
 ///
 /// # Expected structure (common RW)
@@ -67,7 +66,10 @@ pub fn decode_texture_node(
     let mut plugins = Vec::new();
 
     // Find the first two String children (name, mask)
-    let mut strings = tex.children.iter().filter(|c| c.header.id == ids::RW_STRING);
+    let mut strings = tex
+        .children
+        .iter()
+        .filter(|c| c.header.id == ids::RW_STRING);
 
     if let Some(s) = strings.next() {
         name = Some(read_string_payload(s, file_bytes)?);
@@ -76,11 +78,19 @@ pub fn decode_texture_node(
         mask = Some(read_string_payload(s, file_bytes)?);
     }
 
-    if let Some(ext) = tex.children.iter().find(|c| c.header.id == ids::RW_EXTENSION) {
+    if let Some(ext) = tex
+        .children
+        .iter()
+        .find(|c| c.header.id == ids::RW_EXTENSION)
+    {
         plugins = collect_extension_plugins(ext, file_bytes);
     }
 
-    Ok(TextureInfo { name, mask, plugins })
+    Ok(TextureInfo {
+        name,
+        mask,
+        plugins,
+    })
 }
 
 fn read_string_payload(node: &RwChunkNode, file_bytes: &[u8]) -> Result<String, DecodeError> {

@@ -1,8 +1,4 @@
-use shared_utils::{
-    ensure_config_file,
-    load_paths_from_config,
-    process_txd_pipeline,
-};
+use shared_utils::{ensure_config_file, load_paths_from_config, process_txd_pipeline};
 
 fn main() {
     ensure_config_file().expect("Fehler beim Initialisieren der config.ini");

@@ -1,9 +1,9 @@
-use crate::{decrypt_data_pure, DecryptKey, FileExtension};
+use crate::{DecryptKey, FileExtension, decrypt_data_pure};
 use std::{
     ffi::OsStr,
     fs::{self, File},
     io::{self, Read, Seek, SeekFrom, Write},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 /// Extrahiert Dateien aus echten DAT-Dateien (data.dat + reference.dat) ins Zielverzeichnis
@@ -20,7 +20,11 @@ fn read_string<R: Read>(file: &mut R, size: usize) -> io::Result<String> {
         .trim_matches(char::from(0))
         .to_string())
 }
-pub fn extract_from_dat(data_path: &Path, ref_path: &Path, destination_path: &Path) -> io::Result<()> {
+pub fn extract_from_dat(
+    data_path: &Path,
+    ref_path: &Path,
+    destination_path: &Path,
+) -> io::Result<()> {
     let data_encrypted = fs::read(data_path)?;
     let mut data_file = io::Cursor::new(&data_encrypted);
 
@@ -35,7 +39,11 @@ pub fn extract_from_dat(data_path: &Path, ref_path: &Path, destination_path: &Pa
     let output_base = destination_path.join(folder_name);
     fs::create_dir_all(&output_base)?;
 
-    println!("📂 Extrahiere {} (DAT-Datei) → Ziel: {}", data_path.display(), output_base.display());
+    println!(
+        "📂 Extrahiere {} (DAT-Datei) → Ziel: {}",
+        data_path.display(),
+        output_base.display()
+    );
     println!("Entschlüsselte Referenzdatei Größe: {}", decrypted_ref_len);
 
     for i in 0..files_count {
@@ -50,12 +58,10 @@ pub fn extract_from_dat(data_path: &Path, ref_path: &Path, destination_path: &Pa
             .unwrap_or("")
             .to_lowercase();
 
-        let ext_map = FileExtension::from_str(&extension);
-        let new_extension = ext_map.mapped();
-
-        let mut new_file_name = PathBuf::from(&original_file_name);
-        new_file_name.set_extension(new_extension);
-        let output_file_path = output_base.join(&new_file_name);
+        let ext_enum = FileExtension::from_str(&extension);
+        let mapped_ext = ext_enum.mapped();
+        let final_name = Path::new(&original_file_name).with_extension(mapped_ext);
+        let output_file_path = output_base.join(final_name);
 
         data_file.seek(SeekFrom::Start(offset))?;
         let mut buffer = vec![0u8; size];
@@ -77,7 +83,12 @@ pub fn extract_from_dat(data_path: &Path, ref_path: &Path, destination_path: &Pa
         out_file.write_all(decrypted_slice)?;
 
         if i % 50 == 0 || i + 1 == files_count {
-            print!("\r⏳ Extrahiere {} [{}/{}]", data_path.display(), i + 1, files_count);
+            print!(
+                "\r⏳ Extrahiere {} [{}/{}]",
+                data_path.display(),
+                i + 1,
+                files_count
+            );
             io::stdout().flush().ok();
         }
     }

@@ -1,8 +1,9 @@
-use crate::binmesh::BinMesh;
-use crate::geometry::{decode_geometry_struct, GeometryStructSummary};
+use crate::binmesh::{BinMesh, BinMeshPlg};
+use crate::geometry::{GeometryStructSummary, decode_geometry_struct};
 use crate::material::MaterialListInfo;
 use crate::plugins::PluginEntry;
-use rw_dff::ids::ids;
+use crate::skin::SkinData;
+use rw_dff::ids;
 use rw_dff::tree::RwChunkNode;
 use std::fs;
 use std::path::Path;
@@ -22,6 +23,11 @@ pub struct GeometryReportEntry {
 
     pub binmesh: Option<BinMesh>,
     pub binmesh_warnings: Vec<String>,
+
+    pub binmesh_preview: Option<BinMesh>,
+    pub binmesh_plg: Option<BinMeshPlg>,
+
+    pub skin: Option<SkinData>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -32,7 +38,9 @@ pub enum ScanError {
     #[error("missing Struct child for Geometry at 0x{off:X}")]
     MissingGeometryStruct { off: u64 },
 
-    #[error("out of bounds read at 0x{off:X}: payload_off=0x{payload_off:X}, payload_end=0x{payload_end:X}, file_len=0x{file_len:X}")]
+    #[error(
+        "out of bounds read at 0x{off:X}: payload_off=0x{payload_off:X}, payload_end=0x{payload_end:X}, file_len=0x{file_len:X}"
+    )]
     OutOfBounds {
         off: u64,
         payload_off: u64,
@@ -45,7 +53,6 @@ pub enum ScanError {
     Decode(#[from] crate::util::DecodeError),
 }
 
-
 /// Scans a parsed chunk tree, finds all Geometry->Struct nodes,
 /// reads their payload bytes from disk, and decodes summaries.
 ///
@@ -57,7 +64,10 @@ pub enum ScanError {
 /// # Notes
 /// This function reads raw bytes from disk based on offsets; therefore it requires
 /// the original file path.
-pub fn scan_geometry_structs(path: &Path, root: &RwChunkNode) -> Result<Vec<GeometryReportEntry>, ScanError> {
+pub fn scan_geometry_structs(
+    path: &Path,
+    root: &RwChunkNode,
+) -> Result<Vec<GeometryReportEntry>, ScanError> {
     let data = fs::read(path).map_err(ScanError::Io)?;
 
     let mut out = Vec::new();
@@ -78,7 +88,9 @@ fn collect_geometry(
             .children
             .iter()
             .find(|c| c.header.id == ids::RW_STRUCT)
-            .ok_or(ScanError::MissingGeometryStruct { off: node.header_off })?;
+            .ok_or(ScanError::MissingGeometryStruct {
+                off: node.header_off,
+            })?;
 
         let payload_off = struct_node.payload_off as usize;
         let payload_end = struct_node.payload_end as usize;
@@ -113,72 +125,120 @@ fn collect_geometry(
             .map(|ext| crate::plugins::collect_extension_plugins(ext, data))
             .unwrap_or_default();
 
-        let material_count = material_list.as_ref().map(|m| m.material_count).unwrap_or(0);
+        let material_count = material_list
+            .as_ref()
+            .map(|m| m.material_count)
+            .unwrap_or(0);
         let has_any_texture = material_list
             .as_ref()
             .map(|ml| ml.materials.iter().any(|m| m.texture.is_some()))
             .unwrap_or(false);
 
-        let is_helper_geometry =
-            summary.num_vertices == 3 &&
-                summary.num_triangles == 1 &&
-                summary.num_uv_sets == 0 &&
-                !summary.has_normals &&
-                material_count == 1 &&
-                !has_any_texture;
+        let is_helper_geometry = summary.num_vertices == 3
+            && summary.num_triangles == 1
+            && summary.num_uv_sets == 0
+            && !summary.has_normals
+            && material_count == 1
+            && !has_any_texture;
+
+        let mut binmesh_preview: Option<BinMesh> = None;
+        let mut binmesh_plg: Option<BinMeshPlg> = None;
+        let mut skin: Option<SkinData> = None;
 
         let mut binmesh = None;
         let mut binmesh_warnings = Vec::new();
 
-        if let Some(ext) = node.children.iter().find(|c| c.header.id == ids::RW_EXTENSION) {
-            if let Some(bm) = ext.children.iter().find(|c| c.header.id == ids::BINMESH_PLG) {
-                let payload = crate::plugins::payload_slice(bm, data)?;
+        if let Some(bm) = node
+            .children
+            .iter()
+            .find(|c| c.header.id == ids::RW_EXTENSION)
+            .and_then(|ext| {
+                ext.children
+                    .iter()
+                    .find(|c| c.header.id == ids::BINMESH_PLG)
+            })
+        {
+            let payload = crate::plugins::payload_slice(bm, data)?;
 
-                // Try classic decoder
-                match crate::binmesh::decode_binmesh(payload, 16) {
-                    Ok(decoded) => {
-                        // Plausibility checks
-                        if let Some(ml) = &material_list {
-                            for (i, m) in decoded.meshes.iter().enumerate() {
-                                if m.material_index < 0 || (m.material_index as u32) >= ml.material_count {
-                                    binmesh_warnings.push(format!(
-                                        "mesh[{i}]: material_index={} out of range (material_count={})",
-                                        m.material_index, ml.material_count
-                                    ));
-                                }
-                            }
-                        }
-
-                        // Index range vs vertex count
+            match crate::binmesh::decode_binmesh(payload, 16) {
+                Ok(decoded) => {
+                    if let Some(ml) = &material_list {
                         for (i, m) in decoded.meshes.iter().enumerate() {
-                            if let Some(max_i) = m.max_index {
-                                if max_i >= summary.num_vertices {
-                                    binmesh_warnings.push(format!(
-                                        "mesh[{i}]: max_index={} >= num_vertices={} (engine-expanded vertices or non-classic layout)",
-                                        max_i, summary.num_vertices
-                                    ));
-                                }
+                            if m.material_index < 0
+                                || (m.material_index as u32) >= ml.material_count
+                            {
+                                binmesh_warnings.push(format!(
+                                    "mesh[{i}]: material_index={} out of range (material_count={})",
+                                    m.material_index, ml.material_count
+                                ));
                             }
                         }
+                    }
 
-                        if decoded.remaining_bytes != 0 {
+                    for (i, m) in decoded.meshes.iter().enumerate() {
+                        if matches!(m.max_index, Some(max_i) if max_i >= summary.num_vertices) {
                             binmesh_warnings.push(format!(
-                                "binmesh: remaining_bytes={} (non-classic layout or padding)",
-                                decoded.remaining_bytes
+                                "mesh[{i}]: max_index={} >= num_vertices={} (engine-expanded vertices or non-classic layout)",
+                                m.max_index.unwrap(), summary.num_vertices
                             ));
                         }
-
-                        binmesh = Some(decoded);
                     }
-                    Err(e) => {
-                        binmesh_warnings.push(format!("binmesh decode failed: {e}"));
+
+                    if decoded.remaining_bytes != 0 {
+                        binmesh_warnings.push(format!(
+                            "binmesh: remaining_bytes={} (non-classic layout or padding)",
+                            decoded.remaining_bytes
+                        ));
+                    }
+
+                    binmesh = Some(decoded);
+                }
+                Err(e) => {
+                    binmesh_warnings.push(format!("binmesh decode failed: {e}"));
+                }
+            }
+
+            match crate::binmesh::decode_binmesh(payload, 16) {
+                Ok(decoded) => {
+                    binmesh_preview = Some(decoded);
+                }
+                Err(e) => {
+                    binmesh_warnings.push(format!("binmesh preview decode failed: {e}"));
+                }
+            }
+
+            match crate::binmesh::decode_binmesh_plg(payload) {
+                Ok(decoded) => {
+                    binmesh_plg = Some(decoded);
+                }
+                Err(e) => {
+                    binmesh_warnings.push(format!("binmesh_plg decode failed: {e}"));
+                }
+            }
+
+        }
+
+        // Some files may place SkinPLG directly under Geometry->Extension without BinMesh
+        if skin.is_none() {
+            if let Some(ext) = node
+                .children
+                .iter()
+                .find(|c| c.header.id == ids::RW_EXTENSION)
+            {
+                if let Some(skin_node) = ext
+                    .children
+                    .iter()
+                    .find(|c| c.header.id == ids::RW_SKIN_PLG)
+                {
+                    if let Ok(bytes) = crate::plugins::payload_slice(skin_node, data) {
+                        match crate::skin::decode_skin_plg(bytes, summary.num_vertices as usize) {
+                            Ok(decoded) => skin = Some(decoded),
+                            Err(e) => binmesh_warnings.push(format!("skin decode failed: {e}")),
+                        }
                     }
                 }
             }
         }
-
-
-
         out.push(GeometryReportEntry {
             geometry_header_off: node.header_off,
             struct_header_off: struct_node.header_off,
@@ -189,6 +249,9 @@ fn collect_geometry(
             is_helper_geometry,
             binmesh,
             binmesh_warnings,
+            binmesh_preview,
+            binmesh_plg,
+            skin,
         });
     }
 

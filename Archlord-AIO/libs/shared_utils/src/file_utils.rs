@@ -82,7 +82,11 @@ pub fn process_regular_files(files: &[PathBuf], source_path: &str, destination_p
     let non_dat_files: Vec<PathBuf> = files
         .iter()
         .filter(|f| {
-            let ext = f.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            let ext = f
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
             !matches!(ext.as_str(), "dat" | "ma1" | "ma2")
         })
         .cloned()
@@ -101,14 +105,8 @@ pub fn process_regular_files(files: &[PathBuf], source_path: &str, destination_p
             .unwrap_or("")
             .to_lowercase();
         let ext_enum = FileExtension::from_str(&extension);
-        let new_ext = ext_enum.mapped();
 
-        let mut new_relative_path = relative_path.to_path_buf();
-        if new_ext != extension {
-            new_relative_path.set_extension(new_ext);
-        }
-
-        let dest_file = Path::new(destination_path).join(&new_relative_path);
+        let dest_file = Path::new(destination_path).join(&relative_path);
 
         match should_skip_decryption(&file_name) {
             SkipMode::Ignore => continue,

@@ -1,9 +1,9 @@
-use rw_dff::ids::ids;
+use rw_dff::ids;
 use rw_dff::tree::RwChunkNode;
 use serde::Serialize;
 
-use crate::plugins::{collect_extension_plugins, PluginEntry};
-use crate::texture::{decode_texture_node, TextureInfo};
+use crate::plugins::{PluginEntry, collect_extension_plugins};
+use crate::texture::{TextureInfo, decode_texture_node};
 use crate::util::DecodeError;
 
 /// Decoded information about one Material (0x07).
@@ -49,7 +49,11 @@ pub fn decode_material_list_node(
     let (material_count, _indices) = decode_material_list_struct(struct_node, file_bytes)?;
 
     let mut materials = Vec::new();
-    for m in ml.children.iter().filter(|c| c.header.id == ids::RW_MATERIAL) {
+    for m in ml
+        .children
+        .iter()
+        .filter(|c| c.header.id == ids::RW_MATERIAL)
+    {
         materials.push(decode_material_node(m, file_bytes)?);
     }
 

@@ -20,4 +20,3 @@ pub mod obj_template;
 pub use obj_template::*;
 pub mod dff_textures;
 pub use dff_textures::*;
-

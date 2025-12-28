@@ -9,8 +9,10 @@ fn main() {
     ensure_config_file().expect("Fehler beim Initialisieren der config.ini");
 
     if let Err(e) = run() {
-        eprintln!("❌ Fehler beim CSV-Export:
-{e}");
+        eprintln!(
+            "❌ Fehler beim CSV-Export:
+{e}"
+        );
         std::process::exit(1);
     }
 }
@@ -33,7 +35,10 @@ fn run() -> io::Result<()> {
         }
     }
 
-    println!("✅ CSV-Prüfung abgeschlossen. {} Dateien verarbeitet.", count);
+    println!(
+        "✅ CSV-Prüfung abgeschlossen. {} Dateien verarbeitet.",
+        count
+    );
     Ok(())
 }
 
